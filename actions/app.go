@@ -2,21 +2,27 @@ package actions
 
 import (
 	"sync"
+	"time"
 
-	"coke/locales"
 	"coke/models"
 
 	"github.com/gobuffalo/buffalo"
 	"github.com/gobuffalo/buffalo-pop/v3/pop/popmw"
 	"github.com/gobuffalo/envy"
-	contenttype "github.com/gobuffalo/mw-contenttype"
 	forcessl "github.com/gobuffalo/mw-forcessl"
-	i18n "github.com/gobuffalo/mw-i18n/v2"
 	paramlogger "github.com/gobuffalo/mw-paramlogger"
+	tokenauth "github.com/gobuffalo/mw-tokenauth"
 	"github.com/gobuffalo/x/sessions"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/cors"
 	"github.com/unrolled/secure"
 )
+
+type Response struct {
+	Data   interface{} `json:"data"`
+	Errors interface{} `json:"errors"`
+	Status string      `json:"status"`
+}
 
 // ENV is used to help switch settings based on where the
 // application is being run. Default is "development".
@@ -25,7 +31,6 @@ var ENV = envy.Get("GO_ENV", "development")
 var (
 	app     *buffalo.App
 	appOnce sync.Once
-	T       *i18n.Translator
 )
 
 // App is where all routes and middleware for buffalo
@@ -59,28 +64,28 @@ func App() *buffalo.App {
 		app.Use(paramlogger.ParameterLogger)
 
 		// Set the request content type to JSON
-		app.Use(contenttype.Set("application/json"))
+		// app.Use(contenttype.Set("application/json"))
 
 		// Wraps each request in a transaction.
 		//   c.Value("tx").(*pop.Connection)
 		// Remove to disable this.
 		app.Use(popmw.Transaction(models.DB))
 		app.GET("/", HomeHandler)
+
+		app.Use(AuthJwt())
+		app.Use(SetCurrentUser)
+		app.Middleware.Skip(AuthJwt(), AuthCreate)
+
+		ur := UserResource{}
+		app.GET("/users", ur.Index)
+		app.GET("/users/{user_id}", ur.Show)
+		app.POST("/users", ur.Store)
+		app.POST("/auth", AuthCreate)
+		app.GET("/auth", AuthIndex)
+
 	})
 
 	return app
-}
-
-// translations will load locale files, set up the translator `actions.T`,
-// and will return a middleware to use to load the correct locale for each
-// request.
-// for more information: https://gobuffalo.io/en/docs/localization
-func translations() buffalo.MiddlewareFunc {
-	var err error
-	if T, err = i18n.New(locales.FS(), "en-US"); err != nil {
-		app.Stop(err)
-	}
-	return T.Middleware()
 }
 
 // forceSSL will return a middleware that will redirect an incoming request
@@ -93,4 +98,37 @@ func forceSSL() buffalo.MiddlewareFunc {
 		SSLRedirect:     ENV == "production",
 		SSLProxyHeaders: map[string]string{"X-Forwarded-Proto": "https"},
 	})
+}
+
+func AuthJwt() buffalo.MiddlewareFunc {
+	return tokenauth.New(tokenauth.Options{
+		SignMethod: jwt.SigningMethodHS256,
+	})
+}
+
+func SetCurrentUser(next buffalo.Handler) buffalo.Handler {
+	return func(c buffalo.Context) error {
+		user := &models.User{}
+		cv := c.Value("claims")
+		if cv == nil {
+			return next(c)
+		}
+
+		claims := cv.(jwt.MapClaims)
+		userId := claims["user_id"].(float64)
+		exp := int64(claims["exp"].(float64))
+
+		if time.Now().Unix() > exp {
+			return c.Render(401, r.JSON(Response{
+				Errors: "Token is expired",
+			}))
+		}
+
+		err := models.DB.Find(user, userId)
+		if err == nil {
+			c.Set("auth", user)
+		}
+
+		return next(c)
+	}
 }
