@@ -14,8 +14,8 @@ type User struct {
 	ID                   int       `json:"id" db:"id"`
 	Name                 string    `json:"name" form:"name" db:"name"`
 	Email                string    `json:"email" form:"email" db:"email"`
-	Password             string    `json:"-" form:"password" db:"password"`
-	PasswordConfirmation string    `json:"-" form:"password_confirmation" db:"-"`
+	Password             string    `json:"password" form:"password" db:"password"`
+	PasswordConfirmation string    `json:"password_confirmation" form:"password_confirmation" db:"-"`
 	CreatedAt            time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt            time.Time `json:"updated_at" db:"updated_at"`
 }

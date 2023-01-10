@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"coke/internal/rules"
 	"coke/models"
 	"net/http"
 
@@ -13,8 +14,9 @@ type UserResource struct{}
 
 // UserIndex default implementation.
 func (u UserResource) Index(c buffalo.Context) error {
-	users := models.Users{}
-	err := models.DB.All(&users)
+	users := &models.Users{}
+	query := models.DB.PaginateFromParams(c.Params())
+	err := query.All(users)
 	if err != nil {
 		return err
 	}
@@ -22,6 +24,7 @@ func (u UserResource) Index(c buffalo.Context) error {
 	response := Response{
 		Data:   users,
 		Status: "ok",
+		Meta:   query.Paginator,
 	}
 	return c.Render(http.StatusOK, r.JSON(response))
 }
@@ -50,6 +53,7 @@ func (u UserResource) Store(c buffalo.Context) error {
 	verr := validate.Validate(
 		&validators.StringIsPresent{Field: user.Name, Name: "name"},
 		&validators.EmailIsPresent{Field: user.Email, Name: "email"},
+		&rules.Unique{Name: "email", Field: user.Email, Model: &models.User{}},
 		&validators.StringsMatch{Field: user.Password, Field2: user.PasswordConfirmation, Name: "password", Message: "Password and confirmation did not match."},
 	)
 

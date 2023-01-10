@@ -7,11 +7,12 @@ import (
 	"coke/models"
 
 	"github.com/gobuffalo/buffalo"
-	"github.com/gobuffalo/buffalo-pop/v3/pop/popmw"
 	"github.com/gobuffalo/envy"
+	contenttype "github.com/gobuffalo/mw-contenttype"
 	forcessl "github.com/gobuffalo/mw-forcessl"
 	paramlogger "github.com/gobuffalo/mw-paramlogger"
 	tokenauth "github.com/gobuffalo/mw-tokenauth"
+	"github.com/gobuffalo/pop/v6"
 	"github.com/gobuffalo/x/sessions"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/cors"
@@ -19,9 +20,10 @@ import (
 )
 
 type Response struct {
-	Data   interface{} `json:"data"`
-	Errors interface{} `json:"errors"`
-	Status string      `json:"status"`
+	Data   interface{}    `json:"data"`
+	Errors interface{}    `json:"errors"`
+	Status string         `json:"status"`
+	Meta   *pop.Paginator `json:"meta"`
 }
 
 // ENV is used to help switch settings based on where the
@@ -64,12 +66,13 @@ func App() *buffalo.App {
 		app.Use(paramlogger.ParameterLogger)
 
 		// Set the request content type to JSON
-		// app.Use(contenttype.Set("application/json"))
+		app.Use(contenttype.Set("application/json"))
+		app.Use(SetResponseHeader)
 
 		// Wraps each request in a transaction.
 		//   c.Value("tx").(*pop.Connection)
 		// Remove to disable this.
-		app.Use(popmw.Transaction(models.DB))
+		// app.Use(popmw.Transaction(models.DB))
 		app.GET("/", HomeHandler)
 
 		app.Use(AuthJwt())
@@ -129,6 +132,13 @@ func SetCurrentUser(next buffalo.Handler) buffalo.Handler {
 			c.Set("auth", user)
 		}
 
+		return next(c)
+	}
+}
+
+func SetResponseHeader(next buffalo.Handler) buffalo.Handler {
+	return func(c buffalo.Context) error {
+		c.Response().Header().Set("Content-Type", "application/json")
 		return next(c)
 	}
 }
