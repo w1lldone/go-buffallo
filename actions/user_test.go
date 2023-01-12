@@ -19,4 +19,3 @@ func (as *ActionSuite) Test_User_Update() {
 func (as *ActionSuite) Test_User_Delete() {
 	as.Fail("Not Implemented!")
 }
-

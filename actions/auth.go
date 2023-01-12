@@ -22,7 +22,6 @@ var MaxAttempts = 5
 func AuthCreate(c buffalo.Context) error {
 	var err error
 	attempts := 0
-	c.Logger().Info("Checking attempts ", attempts)
 
 	user := &models.User{}
 	err = c.Bind(user)
@@ -41,18 +40,17 @@ func AuthCreate(c buffalo.Context) error {
 		return c.Render(http.StatusUnprocessableEntity, r.JSON(response))
 	}
 
-	password := user.Password
 	res, err := cache.Cache.Value(getAttemptsCacheKey(user.Email))
 	if err == nil {
 		attempts = res.Data().(int) + attempts
 	}
-
 	if attempts >= MaxAttempts {
 		return c.Render(http.StatusTooManyRequests, r.JSON(Response{
 			Errors: fmt.Sprintf("Too many attempts. Please try again in %v minutes", math.Floor(res.LifeSpan().Minutes())),
 		}))
 	}
 
+	password := user.Password
 	err = models.DB.Where("email = (?)", user.Email).First(user)
 	if err != nil {
 		return err
@@ -67,7 +65,6 @@ func AuthCreate(c buffalo.Context) error {
 	claims := jwt.MapClaims{}
 	claims["user_id"] = user.ID
 	claims["exp"] = time.Now().Add(7 * 24 * time.Hour).Unix()
-
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString([]byte(envy.Get("JWT_SECRET", "")))
 	if err != nil {
