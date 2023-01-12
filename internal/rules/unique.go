@@ -10,14 +10,20 @@ import (
 )
 
 type Unique struct {
-	Name  string
-	Field string
-	Table string
-	Model interface{}
+	Name   string
+	Field  string
+	Except int
+	Model  interface{}
 }
 
 func (v *Unique) IsValid(errors *validate.Errors) {
-	count, err := models.DB.Where(fmt.Sprintf("%s = ?", v.Name), v.Field).Count(v.Model)
+	query := models.DB.Where(fmt.Sprintf("%s = ?", v.Name), v.Field)
+
+	if v.Except != 0 {
+		query = query.Where("id != ?", v.Except)
+	}
+
+	count, err := query.Count(v.Model)
 	if err != nil {
 		errors.Add(validators.GenerateKey(v.Name), "Could not get records on database")
 		log.Println(err)

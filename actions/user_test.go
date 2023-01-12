@@ -1,21 +1,36 @@
 package actions
 
-func (as *ActionSuite) Test_User_Index() {
-	as.Fail("Not Implemented!")
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+)
+
+func (as *ActionSuite) Test_Users_Index() {
+	res := as.JSON("/users").Get()
+
+	as.Equal(http.StatusUnauthorized, res.Result().StatusCode)
 }
 
-func (as *ActionSuite) Test_User_Show() {
-	as.Fail("Not Implemented!")
-}
+func (as *ActionSuite) Test_Users_Index_Authorized() {
+	token, err := Login(as)
+	if err != nil {
+		as.Fail("token generation failed")
+	}
 
-func (as *ActionSuite) Test_User_Store() {
-	as.Fail("Not Implemented!")
-}
+	req := as.JSON("/users")
+	req.Headers["Authorization"] = fmt.Sprintf("Bearer %s", token)
+	res := req.Get()
+	as.Equal(http.StatusOK, res.Result().StatusCode)
 
-func (as *ActionSuite) Test_User_Update() {
-	as.Fail("Not Implemented!")
-}
+	var data map[string]interface{}
+	err = json.Unmarshal(res.Body.Bytes(), &data)
+	if err != nil {
+		as.Fail("unmarshal failed")
+	}
 
-func (as *ActionSuite) Test_User_Delete() {
-	as.Fail("Not Implemented!")
+	as.App.Logger.Debugf("unmarshaled ", data["data"])
+
+	users := data["data"].([]interface{})
+	as.Equal(1, len(users))
 }

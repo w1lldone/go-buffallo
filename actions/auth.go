@@ -18,19 +18,24 @@ import (
 
 var MaxAttempts = 5
 
+type credential struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 // AuthAuth default implementation.
 func AuthCreate(c buffalo.Context) error {
 	var err error
 	attempts := 0
 
-	user := &models.User{}
-	err = c.Bind(user)
+	credential := &credential{}
+	err = c.Bind(credential)
 	if err != nil {
 		return err
 	}
 	verr := validate.Validate(
-		&validators.EmailIsPresent{Name: "email", Field: user.Email},
-		&validators.StringIsPresent{Name: "password", Field: user.Password},
+		&validators.EmailIsPresent{Name: "email", Field: credential.Email},
+		&validators.StringIsPresent{Name: "password", Field: credential.Password},
 	)
 	if verr.HasAny() {
 		response := Response{
@@ -40,25 +45,28 @@ func AuthCreate(c buffalo.Context) error {
 		return c.Render(http.StatusUnprocessableEntity, r.JSON(response))
 	}
 
-	res, err := cache.Cache.Value(getAttemptsCacheKey(user.Email))
-	if err == nil {
+	res, err := cache.Cache.Value(getAttemptsCacheKey(credential.Email))
+	if err != nil {
+		c.Logger().Errorf("failed getting value from cache")
+	} else {
 		attempts = res.Data().(int) + attempts
 	}
+
 	if attempts >= MaxAttempts {
 		return c.Render(http.StatusTooManyRequests, r.JSON(Response{
 			Errors: fmt.Sprintf("Too many attempts. Please try again in %v minutes", math.Floor(res.LifeSpan().Minutes())),
 		}))
 	}
 
-	password := user.Password
-	err = models.DB.Where("email = (?)", user.Email).First(user)
+	user := &models.User{}
+	err = models.DB.Where("email = (?)", credential.Email).First(user)
 	if err != nil {
 		return err
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(credential.Password))
 	if err != nil {
-		cache.Cache.Add(getAttemptsCacheKey(user.Email), 5*time.Minute, attempts+1)
+		cache.Cache.Add(getAttemptsCacheKey(credential.Email), 5*time.Minute, attempts+1)
 		return err
 	}
 

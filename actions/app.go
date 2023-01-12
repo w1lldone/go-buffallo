@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"coke/internal/cache"
 	"coke/models"
 
 	"github.com/gobuffalo/buffalo"
@@ -83,10 +84,14 @@ func App() *buffalo.App {
 		app.GET("/users", ur.Index)
 		app.GET("/users/{user_id}", ur.Show)
 		app.POST("/users", ur.Store)
+		app.PUT("/users/{user_id}", ur.Update)
+
 		app.POST("/auth", AuthCreate)
 		app.GET("/auth", AuthIndex)
 
 	})
+
+	cache.NewCache(app.Name)
 
 	return app
 }

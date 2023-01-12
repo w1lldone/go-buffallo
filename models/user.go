@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/gobuffalo/nulls"
 	"github.com/gobuffalo/pop/v6"
 	"github.com/gobuffalo/validate/v3"
 	"github.com/pkg/errors"
@@ -14,8 +15,9 @@ type User struct {
 	ID                   int       `json:"id" db:"id"`
 	Name                 string    `json:"name" form:"name" db:"name"`
 	Email                string    `json:"email" form:"email" db:"email"`
-	Password             string    `json:"password" form:"password" db:"password"`
-	PasswordConfirmation string    `json:"password_confirmation" form:"password_confirmation" db:"-"`
+	Password             string    `json:"-" form:"password" db:"password"`
+	PasswordConfirmation string    `json:"-" form:"password_confirmation" db:"-"`
+	AccessLevel          nulls.Int `json:"access_level" db:"access_level"`
 	CreatedAt            time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt            time.Time `json:"updated_at" db:"updated_at"`
 }

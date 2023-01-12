@@ -10,6 +10,7 @@ require (
 	github.com/gobuffalo/mw-forcessl v1.0.1
 	github.com/gobuffalo/mw-paramlogger v1.0.1
 	github.com/gobuffalo/mw-tokenauth v1.0.1
+	github.com/gobuffalo/nulls v0.4.2
 	github.com/gobuffalo/pop/v6 v6.1.0
 	github.com/gobuffalo/suite/v4 v4.0.3
 	github.com/gobuffalo/validate v2.0.4+incompatible
@@ -43,7 +44,6 @@ require (
 	github.com/gobuffalo/logger v1.0.7 // indirect
 	github.com/gobuffalo/meta v0.3.3 // indirect
 	github.com/gobuffalo/mw-csrf v1.0.1 // indirect
-	github.com/gobuffalo/nulls v0.4.2 // indirect
 	github.com/gobuffalo/plush/v4 v4.1.17 // indirect
 	github.com/gobuffalo/refresh v1.13.3 // indirect
 	github.com/gobuffalo/tags/v3 v3.1.4 // indirect
