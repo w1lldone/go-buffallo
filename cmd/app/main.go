@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"coke/actions"
+	"coke/internal/cache"
 )
 
 // main is the starting point for your Buffalo application.
@@ -14,6 +15,8 @@ import (
 // application that is. :)
 func main() {
 	app := actions.App()
+	cache.NewCache(app.Name)
+
 	if err := app.Serve(); err != nil {
 		log.Fatal(err)
 	}

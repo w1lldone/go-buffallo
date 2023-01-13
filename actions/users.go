@@ -3,6 +3,7 @@ package actions
 import (
 	"coke/internal/rules"
 	"coke/models"
+	"errors"
 	"net/http"
 
 	"github.com/gobuffalo/buffalo"
@@ -134,4 +135,24 @@ func (u UserResource) Update(c buffalo.Context) error {
 		Status: "ok",
 	}
 	return c.Render(http.StatusOK, r.JSON(response))
+}
+
+func (u UserResource) Delete(c buffalo.Context) error {
+	user := &models.User{}
+	err := models.DB.Find(user, c.Param("user_id"))
+	if err != nil {
+		return err
+	}
+
+	auth := c.Value("auth").(*models.User)
+	if auth.ID == user.ID {
+		return c.Error(400, errors.New("can not delete your own account"))
+	}
+
+	err = models.DB.Destroy(user)
+	if err != nil {
+		return err
+	}
+
+	return c.Render(http.StatusNoContent, r.JSON(nil))
 }
